@@ -27,7 +27,9 @@ def load_checkpoint(model, filename):
 
 def main(config):
     dataset = GarbageDataset(config['model_name'], config['label_path'], config['dataset_dir'], config['image_size'])
-    dataloader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=True, collate_fn=collate_fn)
+    train_set, val_set = torch.utils.data.random_split(dataset, [int(len(dataset)*0.8), len(dataset) - int(len(dataset)*0.8)])
+    train_loader = DataLoader(train_set, batch_size=config['batch_size'], shuffle=True, collate_fn=collate_fn)
+    val_loader = DataLoader(val_set, batch_size=config['batch_size'], shuffle=True, collate_fn=collate_fn)
     model = YolosForObjectDetection(YolosConfig.from_pretrained(config['model_name']))
     
 
@@ -46,8 +48,11 @@ def main(config):
     for epoch in range(saved_epoch, config['epochs']):
         save_filename = f'epoch_{epoch}.pth'
         save_checkpoint(model, epoch, os.path.join(config['checkpoint_dir'], save_filename))
+        
+        # training
         log_loss = 0
-        for inputs, labels in dataloader:
+        model.train()
+        for inputs, labels in train_loader:
             inputs = inputs.to(config['device'])
             labels = label_to_device(labels, config['device'])
             outputs = model(inputs, labels = labels)
@@ -56,8 +61,17 @@ def main(config):
             loss.backward()
             optimizer.step()
             log_loss += loss.item()
-        print(f'Epoch: {epoch}, Loss: {log_loss/len(dataloader)}')
-        
+        print(f'Epoch: {epoch}, Training Loss: {log_loss/len(train_loader)}')
+        # validation
+        log_loss = 0
+        model.eval()
+        for inputs, labels in val_loader:
+            inputs = inputs.to(config['device'])
+            labels = label_to_device(labels, config['device'])
+            outputs = model(inputs, labels = labels)
+            loss = outputs.loss
+            log_loss += loss.item()
+        print(f'Epoch: {epoch}, Validation Loss: {log_loss/len(val_loader)}')
     
     
 if __name__ == '__main__':
