@@ -1,8 +1,8 @@
 
 model_name: hustvl/yolos-small
 
-dataset_dir: dataset/參賽者訓練資料集下載(10000)/
-label_path: dataset/dataset_10000_update_0912.xml
+dataset_dir: dataset/data/
+label_path: dataset/label.xml
 checkpoint_dir: checkpoints/
 
 epochs: 10
